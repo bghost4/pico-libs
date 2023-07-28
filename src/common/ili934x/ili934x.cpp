@@ -36,6 +36,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "hardware/gpio.h"
 #include <cstring>
 
+
+
 #ifndef pgm_read_byte
 #define pgm_read_byte(addr) (*(const uint8_t *)(addr))
 #endif
@@ -51,6 +53,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     b = a + (~b) + 1;      \
     a = a + (~b) + 1;
 #endif
+
+void ILI934X::cs_select() {
+    asm volatile("nop \n nop \n nop \n nop \n nop \n nop");
+    gpio_put(_cs, 0);  // Active low
+    asm volatile("nop \n nop \n nop \n nop \n nop \n nop");
+}
+
+void ILI934X::cs_deselect() {
+    asm volatile("nop \n nop \n nop \n nop \n nop \n nop");
+    gpio_put(_cs, 1);
+    asm volatile("nop \n nop \n nop \n nop \n nop \n nop");
+}
 
 ILI934X::ILI934X(spi_inst_t *spi, uint8_t cs, uint8_t dc, uint8_t rst, uint16_t width, uint16_t height, ILI934X_ROTATION rotation)
 {
@@ -319,6 +333,17 @@ void ILI934X::blit(uint16_t x, uint16_t y, uint16_t h, uint16_t w, uint16_t *blt
     }
 }
 
+void ILI934X::drawString(uint16_t x,uint16_t y,char *str,uint16_t color,GFXfont *font) {
+    int strLen = strlen(str);
+    int xpos = x;
+    for(int i=0; i<strLen; i++) {
+        char c = str[i] - (uint8_t)pgm_read_byte(&font->first);
+        GFXglyph *glyph = font->glyph + c;
+        drawChar(xpos,y,str[i],color,font);
+        xpos += glyph->width;
+    }
+}
+
 void ILI934X::drawChar(uint16_t x, uint16_t y, char chr, uint16_t colour, GFXfont *font)
 {
     char c = chr - (uint8_t)pgm_read_byte(&font->first);
@@ -434,7 +459,8 @@ void ILI934X::clear(uint16_t colour)
 void ILI934X::_write(uint8_t cmd, uint8_t *data, size_t dataLen)
 {
     gpio_put(_dc, 0);
-    gpio_put(_cs, 0);
+    //gpio_put(_cs, 0);
+    cs_select();
 
     // spi write
     uint8_t commandBuffer[1];
@@ -447,7 +473,8 @@ void ILI934X::_write(uint8_t cmd, uint8_t *data, size_t dataLen)
 
     spi_write_blocking(_spi, commandBuffer, 1);
 
-    gpio_put(_cs, 1);
+//    gpio_put(_cs, 1);
+    cs_deselect();
 
     // do stuff
     if (data != NULL)
@@ -459,11 +486,13 @@ void ILI934X::_write(uint8_t cmd, uint8_t *data, size_t dataLen)
 void ILI934X::_data(uint8_t *data, size_t dataLen)
 {
     gpio_put(_dc, 1);
-    gpio_put(_cs, 0);
+    //gpio_put(_cs, 0);
+    cs_select();
 
     spi_write_blocking(_spi, data, dataLen);
 
-    gpio_put(_cs, 1);
+    //gpio_put(_cs, 1);
+    cs_deselect();
 }
 
 void ILI934X::_writeBlock(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t *data, size_t dataLen)

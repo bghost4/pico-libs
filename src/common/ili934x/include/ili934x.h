@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "gfxfont.h"
 #include "hardware/spi.h"
+#include "pico/stdlib.h"
 
 #define _RDDSDR 0x0f    // Read Display Self-Diagnostic Result
 #define _SLPOUT 0x11    // Sleep Out
@@ -110,7 +111,7 @@ enum ILI934X_ROTATION
 class ILI934X
 {
 public:
-    ILI934X(spi_inst_t *spi, uint8_t cs, uint8_t dc, uint8_t rst, uint16_t width = 240, uint16_t height = 320, ILI934X_ROTATION rotation = R0DEG);
+    ILI934X(spi_inst_t *spi, uint8_t cs, uint8_t dc, uint8_t rst, uint16_t width = 240, uint16_t height = 320, ILI934X_ROTATION rotation = R90DEG);
 
     void reset();
     void init();
@@ -122,6 +123,7 @@ public:
     void clear(uint16_t colour = COLOUR_BLACK);
     void blit(uint16_t x, uint16_t y, uint16_t h, uint16_t w, uint16_t *bltBuf);
     void drawChar(uint16_t x, uint16_t y, char c, uint16_t colour, GFXfont *font);
+    void drawString(uint16_t x,uint16_t y,char *str,uint16_t color,GFXfont *font);
     void charBounds(char c, int16_t *x, int16_t *y, int16_t *minx, int16_t *miny, int16_t *maxx, int16_t *maxy, GFXfont *font);
     void textBounds(const char *str, int16_t x, int16_t y, int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h, GFXfont *font);
 
@@ -130,7 +132,8 @@ private:
     void _write(uint8_t cmd, uint8_t *data = NULL, size_t dataLen = 0);
     void _data(uint8_t *data, size_t dataLen = 0);
     void _writeBlock(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t *data = NULL, size_t dataLen = 0);
-    
+    void cs_select();
+    void cs_deselect();
 private:
     spi_inst_t *_spi = NULL;
     uint8_t _cs;
